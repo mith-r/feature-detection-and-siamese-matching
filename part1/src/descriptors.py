@@ -19,20 +19,20 @@ class FeatureDescriptor:
         """
         Initialize the descriptor object based on the type.
         """
-        # TODO: Initialize SIFT or SURF descriptor based on self.descriptor_type
+        # Initialize SIFT or SURF descriptor based on self.descriptor_type
         # HINT: Use cv2.SIFT_create() or cv2.xfeatures2d.SURF_create()
         
         if self.descriptor_type == 'SIFT':
             # Extract parameters from self.params or use default values
             
             # Your implementation here
-            self.descriptor = None
+            self.descriptor = cv2.SIFT_create(**self.params)
             
         elif self.descriptor_type == 'SURF':
             # Extract parameters from self.params or use default values
             
             # Your implementation here
-            self.descriptor = None
+            self.descriptor = cv2.xfeatures2d.SURF_create(**self.params)
             
         else:
             raise ValueError(f"Unsupported descriptor type: {self.descriptor_type}")
