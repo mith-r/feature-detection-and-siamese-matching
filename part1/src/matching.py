@@ -25,15 +25,27 @@ class FeatureMatcher:
         Returns:
             list: List of DMatch objects
         """
-        # TODO: Implement descriptor matching with Lowe's ratio test
+        # Implement descriptor matching with Lowe's ratio test
         # HINT: Compute distances between all descriptor pairs and apply ratio test
         
         # Compute distance matrix
         # Your implementation here
-        distances = None
+        distances = cdist(desc1, desc2, metric = self.distance_metric)
         
         # Find matches using ratio test
         matches = []
+
+        for i in range(distances.shape[0]):
+            idx = np.argsort(distances[i])
+            j1 = idx[0]
+            j2 = idx[1]
+
+            d1 = distances[i, j1]
+            d2 = distances[i, j2]
+
+            if d1 < self.ratio_threshold * d2:
+                matches.append(cv2.DMatch(i, int(j1), float(d1)))
+  
         
         # Your implementation of ratio test here
         
