@@ -112,7 +112,11 @@ class HarrisDetector:
         corners = response_normalized > self.threshold
         
         # Your implementation of non-maximum suppression here
-        result = np.zeros_like(corners, dtype=bool)
+        kernel = np.ones((neighborhood_size, neighborhood_size), np.uint8)
+        dilated = cv2.dilate(response_normalized, kernel)
+        local_max = (response_normalized == dilated)
+
+        result = local_max & corners
         
         return result
     
