@@ -79,7 +79,7 @@ class FeatureDescriptor:
         # HINT: Use the compute method
         
         # Your implementation here
-        keypoints, descriptors = None, None
+        keypoints, descriptors = self.descriptor.compute(image, keypoints)
         
         return keypoints, descriptors
 
