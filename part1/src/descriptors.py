@@ -75,7 +75,7 @@ class FeatureDescriptor:
         if len(image.shape) > 2:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
-        # TODO: Compute descriptors for the provided keypoints
+        # Compute descriptors for the provided keypoints
         # HINT: Use the compute method
         
         # Your implementation here
@@ -104,10 +104,17 @@ class HarrisKeypointExtractor:
         Returns:
             list: List of cv2.KeyPoint objects
         """
-        # TODO: Detect Harris corners and convert them to cv2.KeyPoint objects
+        # Detect Harris corners and convert them to cv2.KeyPoint objects
         # HINT: Use the harris_detector to find corners, then convert coordinates to KeyPoints
         
         # Your implementation here
+        
+        corners, response = self.harris_detector.detect_corners(image)
+        coordinates = self.harris_detector.get_corner_coodinates(corners)
+
+
         keypoints = []
+        for (x,y) in coordinates:
+            keypoints.append(cv2.KeyPoint(float(x), float(y), 10.0))
         
         return keypoints
