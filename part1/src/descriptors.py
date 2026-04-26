@@ -110,7 +110,7 @@ class HarrisKeypointExtractor:
         # Your implementation here
         
         corners, response = self.harris_detector.detect_corners(image)
-        coordinates = self.harris_detector.get_corner_coodinates(corners)
+        coordinates = self.harris_detector.get_corner_coordinates(corners)
 
 
         keypoints = []
