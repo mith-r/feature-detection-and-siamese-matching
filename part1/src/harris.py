@@ -25,7 +25,7 @@ class HarrisDetector:
         Returns:
             tuple: (dx, dy) gradient images
         """
-        # TODO: Implement gradient computation using Sobel operators
+        # Implement gradient computation using Sobel operators
         # HINT: Use cv2.Sobel() for gradient computation
         
         # Convert to float for better precision
@@ -48,15 +48,19 @@ class HarrisDetector:
         Returns:
             tuple: (Ixx, Ixy, Iyy) structure tensor components
         """
-        # TODO: Implement structure tensor computation
+        # Implement structure tensor computation
         # HINT: Apply Gaussian smoothing to the products of derivatives
         
         # Compute products of derivatives
-        Ixx = None
-        Ixy = None
-        Iyy = None
+        Ixx = dx*dx
+        Ixy = dx*dy
+        Iyy = dy*dy
         
         # Apply Gaussian smoothing
+        Ixx = cv2.GaussianBlur(Ixx, (self.window_size, self.window_size), 0)
+        Ixy = cv2.GaussianBlur(Ixy, (self.window_size, self.window_size), 0)
+        Iyy = cv2.GaussianBlur(Iyy, (self.window_size, self.window_size), 0)
+
         # Your implementation here
         
         return Ixx, Ixy, Iyy
