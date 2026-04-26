@@ -128,6 +128,15 @@ class RANSAC:
         # HINT: Consider inlier ratio and transformation error
         
         # Your implementation here
-        quality_score = 0.0
+        ratio = inliers.sum() / len(inliers)
+        projected = cv2.perspectiveTransform(src_points.reshape(-1,1,2).astype(np.float32), H).reshape(-1,2)
+        errors = np.linalg.norm(projected - dst_points, axis=1)
+        
+        if inliers.sum() > 0:
+            mean_error = errors[inliers].mean()
+        else:
+            mean_error = float('inf')
+
+        quality_score = ratio / (1.0 + mean_error)
         
         return quality_score
