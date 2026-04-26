@@ -5,3 +5,9 @@ __pycache__/
 checkpoints/
 results/
 samples/
+data/
+descriptors_test.jpg
+harris_test.jpg
+matching_test.jpg
+
+
