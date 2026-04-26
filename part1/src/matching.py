@@ -80,18 +80,34 @@ class RANSAC:
         assert src_points.shape[0] == dst_points.shape[0], "Number of points must match"
         assert src_points.shape[0] >= 4, "At least 4 point pairs are required"
         
-        # TODO: Implement RANSAC algorithm for homography estimation
+        # Implement RANSAC algorithm for homography estimation
         # HINT: 1. Randomly select 4 point pairs
-        #       2. Compute homography
-        #       3. Transform all points
-        #       4. Identify inliers
-        #       5. Keep the best model
-        
         n_points = src_points.shape[0]
-        
-        # Your implementation here
         best_H = None
         best_inliers = None
+        best_count = 0
+        for i in range(self.n_iterations):
+            idx = np.random.choice(n_points, 4, replace = False)
+            src_sample = src_points[idx]
+            dst_sample = dst_points[idx]
+
+            #       2. Compute homography
+            H = cv2.getPerspectiveTransform(src_sample.astype(np.float32), dst_sample.astype(np.float32))
+
+            #       3. Transform all points
+            src_reshaped = src_points.reshape(-1, 1, 2).astype(np.float32)
+            projected = cv2.perspectiveTransform(src_reshaped, H).reshape(-1,2)
+
+            #       4. Identify inliers
+            errors = np.linalg.norm(projected - dst_points, axis = 1)
+            inliers = errors < self.inlier_threshold
+
+            #       5. Keep the best model
+            count = int(inliers.sum())
+            if count > best_count:
+                best_count = count
+                best_H = H
+                best_inliers = inliers
         
         return best_H, best_inliers
     
