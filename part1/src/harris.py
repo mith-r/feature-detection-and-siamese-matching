@@ -32,8 +32,8 @@ class HarrisDetector:
         image = image.astype(np.float32)
         
         # Your implementation here
-        dx = None
-        dy = None
+        dx = cv2.Sobel(image, cv2.CV_64F, 1, 0)
+        dy = cv2.Sobel(image, cv2.CV_64F, 0, 1)
         
         return dx, dy
     
