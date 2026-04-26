@@ -77,12 +77,14 @@ class HarrisDetector:
         Returns:
             numpy.ndarray: Corner response image
         """
-        # TODO: Implement Harris corner response computation
+        # Implement Harris corner response computation
         # HINT: R = det(M) - k * trace(M)^2
         # where M = [[Ixx, Ixy], [Ixy, Iyy]]
         
         # Your implementation here
-        response = None
+        det = Ixx*Iyy - Ixy*Ixy
+        trace = Ixx + Iyy
+        response = det - self.k * trace**2
         
         return response
     
