@@ -56,7 +56,7 @@ class FeatureDescriptor:
         # HINT: Use the detectAndCompute method
         
         # Your implementation here
-        keypoints, descriptors = None, None
+        keypoints, descriptors = self.descriptor.detectAndCompute(image, mask)
         
         return keypoints, descriptors
     
