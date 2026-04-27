@@ -88,7 +88,7 @@ class HarrisDetector:
         
         return response
     
-    def non_max_suppression(self, response, neighborhood_size=3):
+    def non_max_suppression(self, response, neighborhood_size=7):
         """
         Apply non-maximum suppression to corner response.
         
