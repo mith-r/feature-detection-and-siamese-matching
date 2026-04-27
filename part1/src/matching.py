@@ -25,16 +25,9 @@ class FeatureMatcher:
         Returns:
             list: List of DMatch objects
         """
-        # Implement descriptor matching with Lowe's ratio test
-        # HINT: Compute distances between all descriptor pairs and apply ratio test
-        
-        # Compute distance matrix
-        # Your implementation here
-        distances = cdist(desc1, desc2, metric = self.distance_metric)
-        
-        # Find matches using ratio test
-        matches = []
+        distances = cdist(desc1, desc2, metric=self.distance_metric)
 
+        matches = []
         for i in range(distances.shape[0]):
             idx = np.argsort(distances[i])
             j1 = idx[0]
@@ -45,14 +38,11 @@ class FeatureMatcher:
 
             if d1 < self.ratio_threshold * d2:
                 matches.append(cv2.DMatch(i, int(j1), float(d1)))
-  
-        
-        # Your implementation of ratio test here
-        
+
         return matches
 
 class RANSAC:
-    def __init__(self, n_iterations=1000, inlier_threshold=3.0, min_inliers=10):
+    def __init__(self, n_iterations=1000, inlier_threshold=3.0, min_inliers=5):
         """
         Initialize RANSAC algorithm for homography estimation.
         
