@@ -9,5 +9,6 @@ data/
 descriptors_test.jpg
 harris_test.jpg
 matching_test.jpg
-
+results/
+images/
 
