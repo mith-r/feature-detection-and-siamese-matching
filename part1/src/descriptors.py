@@ -112,7 +112,6 @@ class HarrisKeypointExtractor:
         corners, response = self.harris_detector.detect_corners(image)
         coordinates = self.harris_detector.get_corner_coordinates(corners)
 
-
         keypoints = []
         for (x,y) in coordinates:
             keypoints.append(cv2.KeyPoint(float(x), float(y), 10.0))
