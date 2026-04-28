@@ -3,7 +3,7 @@ import cv2
 from scipy.spatial.distance import cdist
 
 class FeatureMatcher:
-    def __init__(self, ratio_threshold=0.75, distance_metric='euclidean'):
+    def __init__(self, ratio_threshold=0.8, distance_metric='euclidean'):
         """
         Initialize feature matcher.
         
@@ -42,7 +42,7 @@ class FeatureMatcher:
         return matches
 
 class RANSAC:
-    def __init__(self, n_iterations=1000, inlier_threshold=3.0, min_inliers=5):
+    def __init__(self, n_iterations=1000, inlier_threshold=5.0, min_inliers=4):
         """
         Initialize RANSAC algorithm for homography estimation.
         
@@ -82,11 +82,19 @@ class RANSAC:
             dst_sample = dst_points[idx]
 
             #       2. Compute homography
-            H = cv2.getPerspectiveTransform(src_sample.astype(np.float32), dst_sample.astype(np.float32))
+            A = []
+            for (x, y), (xp, yp) in zip(src_sample, dst_sample):
+                A.append([-x, -y, -1, 0, 0, 0, x*xp, y*xp, xp])
+                A.append([0, 0, 0, -x, -y, -1, x*yp, y*yp, yp])
+            A = np.array(A)
+            _, _, Vt = np.linalg.svd(A)
+            H = Vt[-1].reshape(3, 3)
+            H = H / H[2, 2]
 
             #       3. Transform all points
-            src_reshaped = src_points.reshape(-1, 1, 2).astype(np.float32)
-            projected = cv2.perspectiveTransform(src_reshaped, H).reshape(-1,2)
+            homog = np.hstack([src_points, np.ones((src_points.shape[0], 1))])
+            projected_h = (H @ homog.T).T
+            projected = projected_h[:, :2] / projected_h[:, 2:3]
 
             #       4. Identify inliers
             errors = np.linalg.norm(projected - dst_points, axis = 1)
@@ -98,6 +106,8 @@ class RANSAC:
                 best_count = count
                 best_H = H
                 best_inliers = inliers
+        if best_count < self.min_inliers:
+            return None, None
         
         return best_H, best_inliers
     
@@ -118,6 +128,9 @@ class RANSAC:
         # HINT: Consider inlier ratio and transformation error
         
         # Your implementation here
+        if H is None or inliers is None:
+            return 0.0
+
         ratio = inliers.sum() / len(inliers)
         projected = cv2.perspectiveTransform(src_points.reshape(-1,1,2).astype(np.float32), H).reshape(-1,2)
         errors = np.linalg.norm(projected - dst_points, axis=1)

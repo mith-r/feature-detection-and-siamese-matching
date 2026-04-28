@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 
 class HarrisDetector:
-    def __init__(self, k=0.04, window_size=3, threshold=0.01):
+    def __init__(self, k=0.04, window_size=3, threshold=0.005):
         """
         Initialize Harris corner detector.
         
@@ -88,7 +88,7 @@ class HarrisDetector:
         
         return response
     
-    def non_max_suppression(self, response, neighborhood_size=7):
+    def non_max_suppression(self, response, neighborhood_size=3):
         """
         Apply non-maximum suppression to corner response.
         

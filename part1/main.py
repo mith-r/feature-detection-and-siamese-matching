@@ -74,11 +74,13 @@ def process_image_pair(img1_path, img2_path, harris_detector, descriptor_type, r
     keypoint_extractor = HarrisKeypointExtractor(harris_detector)
     keypoints1 = keypoint_extractor.detect(img1)
     keypoints2 = keypoint_extractor.detect(img2)
-    
+    print(f"  Harris keypoints: {len(keypoints1)} / {len(keypoints2)}")
+
     # Compute descriptors
     descriptor = FeatureDescriptor(descriptor_type=descriptor_type)
     keypoints1, descriptors1 = descriptor.compute_for_keypoints(img1, keypoints1)
     keypoints2, descriptors2 = descriptor.compute_for_keypoints(img2, keypoints2)
+    print(f"  After SIFT compute: {len(keypoints1)} / {len(keypoints2)}")
     
     # Visualize keypoints
     keypoints_vis1 = visualize_keypoints(img1, keypoints1)
@@ -91,7 +93,7 @@ def process_image_pair(img1_path, img2_path, harris_detector, descriptor_type, r
     print("Step 3: Feature Matching with RANSAC")
     
     # Match descriptors
-    matcher = FeatureMatcher(ratio_threshold=0.75)
+    matcher = FeatureMatcher(ratio_threshold=0.8)
     matches = matcher.match_descriptors(descriptors1, descriptors2)
     
     # Visualize initial matches
@@ -103,7 +105,7 @@ def process_image_pair(img1_path, img2_path, harris_detector, descriptor_type, r
         points1, points2 = extract_matched_points(keypoints1, keypoints2, matches)
         
         # Apply RANSAC
-        ransac = RANSAC(n_iterations=1000, inlier_threshold=3.0)
+        ransac = RANSAC(n_iterations=1000, inlier_threshold=5.0)
         H, inliers = ransac.estimate_homography(points1, points2)
         
         # Visualize ransac matches
@@ -111,8 +113,8 @@ def process_image_pair(img1_path, img2_path, harris_detector, descriptor_type, r
         cv2.imwrite(os.path.join(pair_dir, "ransac_matches.jpg"), ransac_matches_vis)
         
         # Compute match quality
-        quality_score = ransac.compute_match_quality(H, points1, points2, inliers)
-        
+        quality_score = ransac.compute_match_quality(H, points1, points2, inliers) if H is not None else 0
+
         inlier_count = np.sum(inliers) if inliers is not None else 0
         inlier_ratio = inlier_count / len(matches) if len(matches) > 0 else 0
         
@@ -175,7 +177,7 @@ def main():
             ))
     
     # Initialize Harris detector
-    harris_detector = HarrisDetector(k=0.04, window_size=3, threshold=0.01)
+    harris_detector = HarrisDetector(k=0.04, window_size=3, threshold=0.005)
     
     # Choose descriptor type ('SIFT' or 'SURF')
     descriptor_type = 'SIFT'
