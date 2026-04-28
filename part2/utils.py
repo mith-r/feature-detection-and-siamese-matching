@@ -48,7 +48,7 @@ def visualize_predictions(img1_set, img2_set, labels, predictions, n=5):
     Args:
         img1_set: Batch of first images
         img2_set: Batch of second images
-        labels: Ground truth labels (1 = different, 0 = same)
+        labels: Ground truth labels (1 = same, 0 = different)
         predictions: Model predictions
         n: Number of pairs to display
     """
@@ -75,8 +75,8 @@ def visualize_predictions(img1_set, img2_set, labels, predictions, n=5):
         
         plt.subplot(n, 2, 2*i+2)
         plt.imshow(img2)
-        plt.title(f"Image 2 (GT: {'Same' if label == 0 else 'Different'}, " + 
-                  f"Pred: {'Same' if pred == 0 else 'Different'})")
+        plt.title(f"Image 2 (GT: {'Same' if label == 1 else 'Different'}, " +
+                  f"Pred: {'Same' if pred == 1 else 'Different'})")
         plt.axis('off')
     
     plt.tight_layout()

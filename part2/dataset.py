@@ -232,10 +232,6 @@ class FeatureMatchingDataset(Dataset):
             img1 = self.transform(img1)
             img2 = self.transform(img2)
 
-        # Convert imgs to tensors
-        img1 = np.array(img1)
-        img2 = np.array(img2)
-        
         return (img1, img2, label)
 
     def random_augmentation(self, img):

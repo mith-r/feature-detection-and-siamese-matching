@@ -10,8 +10,8 @@ from utils import threshold_sigmoid, threshold_contrastive_loss, visualize_predi
 from tqdm import tqdm
 
 # Hyper Parameters
-BATCH_SIZE = 10
-NUM_EPOCHS = 5
+BATCH_SIZE = 32
+NUM_EPOCHS = 50
 
 
 def train(args):
@@ -26,22 +26,44 @@ def train(args):
     default_transform = transforms.Compose([
         transforms.Resize((256,256)),
         transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
     ])
-    
+
     # Load dataset
     train_dataset = FeatureMatchingDataset(args.data_dir, args.train_file, split="train", transform=default_transform)
     print(f"Loaded {len(train_dataset)} training pairs.")
-    
+
+    val_dataset = FeatureMatchingDataset(args.data_dir, args.train_file, split="test", transform=default_transform)
+    print(f"Loaded {len(val_dataset)} validation pairs.")
+
     # Create data loader
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                               batch_size=BATCH_SIZE,
-                                              shuffle=True)
+                                              shuffle=True,
+                                              num_workers=4,
+                                              persistent_workers=True,
+                                              pin_memory=True,
+    )
+    val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
+                                             batch_size=BATCH_SIZE,
+                                             shuffle=False,
+                                             num_workers=4,
+                                             persistent_workers=True,
+                                             pin_memory=True,
+    )
     
     # Initialize model
     siamese_net = SiameseNetwork(args.contra_loss)
-    if args.cuda and torch.cuda.is_available():
-        siamese_net = siamese_net.cuda()
-        print("Using CUDA for training")
+
+    device = torch.device(
+        "mps" if torch.backends.mps.is_available()
+        else "cuda" if torch.cuda.is_available()
+        else "cpu"
+    )
+    print(f"Using device: {device}")
+    siamese_net = siamese_net.to(device)
+
     
     # Define loss function
     if args.contra_loss:
@@ -53,9 +75,11 @@ def train(args):
     
     # Define optimizer
     optimizer = torch.optim.Adam(siamese_net.parameters(), lr=args.lr)
-    
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+
     # Initialize lists to track metrics
     train_losses = []
+    best_acc = 0.0
     
     # Train the model
     num_epochs = args.epochs
@@ -65,16 +89,54 @@ def train(args):
     # TODO: Implement the training loop
     # Your implementation should:
     # 1. Loop through all epochs
+    for epoch in range(num_epochs):
     # 2. For each epoch, iterate through the batches in train_loader
+        siamese_net.train()
+        epoch_loss = 0.0
+        num_batches = 0
+        for img1, img2, labels in tqdm(train_loader, desc = f"Epoch {epoch+1}/{num_epochs}"):
+
     # 3. For each batch:
+            labels = labels.view(-1, 1).float()
+
     #    a. Move the data to the appropriate device (CPU/CUDA)
+            img1 = img1.to(device)
+            img2 = img2.to(device)
+            labels = labels.to(device)
+
     #    b. Zero the parameter gradients using optimizer.zero_grad()
+            optimizer.zero_grad()
+
     #    c. Perform a forward pass through the network
     #    d. Compute the loss (different for contrastive and BCE loss)
+            if args.contra_loss:
+                out1, out2 = siamese_net(img1, img2)
+                loss = criterion(out1, out2, labels)
+            else:
+                output = siamese_net(img1, img2)
+                loss = criterion(output, labels)
+  
     #    e. Perform backpropagation using loss.backward()
+            loss.backward()
+
     #    f. Update the model parameters using optimizer.step()
+            optimizer.step()
+            epoch_loss += loss.item()
+            num_batches+= 1
+
     # 4. Track and print statistics (loss) for each epoch
     # 5. Periodically evaluate the model using the evaluate function
+        avg_loss = epoch_loss / num_batches
+        train_losses.append(avg_loss)
+        print(f"Epoch {epoch+1}/{num_epochs} loss = {avg_loss:.4f}")
+        scheduler.step()
+        if (epoch+1) % args.eval_freq == 0:
+            acc = evaluate(args, "validation", val_loader, siamese_net, visualize=False)
+            if acc > best_acc:
+                best_acc = acc
+                torch.save(siamese_net.state_dict(), args.model_file)
+                print(f"  New best validation accuracy {acc:.2f}% — saved checkpoint to {args.model_file}")
+
     #
     # Make sure to handle both contrastive loss and BCE loss cases appropriately
     # ======================================================================
@@ -95,11 +157,11 @@ def train(args):
     plt.savefig('training_loss.png')
     plt.close()
     
-    # Save the trained model
-    model_path = f"{args.model_file}"
-    torch.save(siamese_net.state_dict(), model_path)
-    print(f"Saved model to {model_path}")
-    
+    # Reload the best checkpoint so the returned model is the best one seen during training
+    if best_acc > 0.0:
+        siamese_net.load_state_dict(torch.load(args.model_file))
+        print(f"Best validation accuracy: {best_acc:.2f}% (loaded from {args.model_file})")
+
     return siamese_net
 
 
@@ -119,6 +181,10 @@ def evaluate(args, split, data_loader, siamese_net, visualize=False):
     
     correct = 0.0
     total = 0.0
+    tp = 0
+    fp = 0
+    fn = 0
+    tn = 0
     all_preds = []
     all_labels = []
     sample_imgs1 = []
@@ -128,10 +194,11 @@ def evaluate(args, split, data_loader, siamese_net, visualize=False):
         for img1_set, img2_set, labels in data_loader:
             labels = labels.view(-1, 1).float()
             
-            if args.cuda and torch.cuda.is_available():
-                img1_set = img1_set.cuda()
-                img2_set = img2_set.cuda()
-                labels = labels.cuda()
+            device = next(siamese_net.parameters()).device
+            img1_set = img1_set.to(device)
+            img2_set = img2_set.to(device)
+            labels = labels.to(device)
+
             
             # Forward pass
             if args.contra_loss:
@@ -144,6 +211,11 @@ def evaluate(args, split, data_loader, siamese_net, visualize=False):
             # Calculate accuracy
             total += labels.size(0)
             correct += (output_labels == labels).sum().item()
+
+            tp += ((output_labels == 1) & (labels == 1)).sum().item()
+            fp += ((output_labels == 1) & (labels == 0)).sum().item()
+            fn += ((output_labels == 0) & (labels == 1)).sum().item()
+            tn += ((output_labels == 0) & (labels == 0)).sum().item()
             
             # Store predictions for visualization
             if visualize and len(sample_imgs1) < 5:
@@ -157,7 +229,12 @@ def evaluate(args, split, data_loader, siamese_net, visualize=False):
     
     # Calculate accuracy
     accuracy = 100 * correct / total
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
     print(f'Accuracy on the {total} {split} images: {accuracy:.2f}%')
+    print(f'  Precision: {precision:.4f} | Recall: {recall:.4f} | F1: {f1:.4f}')
+    print(f'  TP: {tp} | FP: {fp} | FN: {fn} | TN: {tn}')
     
     # Visualize some predictions
     if visualize and sample_imgs1:
@@ -191,13 +268,20 @@ def test(args, siamese_net=None):
         siamese_net.load_state_dict(torch.load(args.model_file))
         print(f"Loaded model from {args.model_file}")
     
-    if args.cuda and torch.cuda.is_available():
-        siamese_net = siamese_net.cuda()
+    device = torch.device(
+        "mps" if torch.backends.mps.is_available()
+        else "cuda" if torch.cuda.is_available()
+        else "cpu"
+    )
+    siamese_net = siamese_net.to(device)
+
     
     # Define transformations
     default_transform = transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                             std=[0.229, 0.224, 0.225]),
     ])
     
     # Load test dataset
@@ -240,7 +324,7 @@ def main():
                         help='Use CUDA if available')
     parser.add_argument('--contra_loss', action='store_true', default=False, 
                         help='Use contrastive loss instead of BCE')
-    parser.add_argument('--eval_freq', type=int, default=1, 
+    parser.add_argument('--eval_freq', type=int, default=1,
                         help='Frequency of evaluation during training')
     
     args = parser.parse_args()
